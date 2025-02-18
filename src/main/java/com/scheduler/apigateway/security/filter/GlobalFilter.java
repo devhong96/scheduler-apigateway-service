@@ -10,6 +10,10 @@ import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
+import java.net.URI;
+
+import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR;
+
 @Slf4j
 @Component
 public class GlobalFilter extends AbstractGatewayFilterFactory<GlobalFilter.Config> {
@@ -19,7 +23,6 @@ public class GlobalFilter extends AbstractGatewayFilterFactory<GlobalFilter.Conf
 
     @Override
     public GatewayFilter apply(Config config) {
-        
         return ((exchange, chain) -> {
             ServerHttpRequest request = exchange.getRequest();
             ServerHttpResponse response = exchange.getResponse();
@@ -27,11 +30,13 @@ public class GlobalFilter extends AbstractGatewayFilterFactory<GlobalFilter.Conf
             log.info("Global Filter baseMessage: {}", config.getBaseMessage());
 
             if (config.preLogger) {
-                log.info("Global Filter URL: {}", request.getURI().getPath());
+                log.info("Global Filter URL (Incoming Request): {}", request.getURI().getPath());
             }
 
-            // 커스텀 필터가 여기서 작동
             return chain.filter(exchange).then(Mono.fromRunnable(() -> {
+                URI routedUrl = exchange.getAttribute(GATEWAY_REQUEST_URL_ATTR);
+                log.info("Gateway Routed To: {}", routedUrl);
+
                 if (config.postLogger) {
                     log.info("Global Filter End: requestId -> {}", response.getStatusCode());
                 }
@@ -39,7 +44,6 @@ public class GlobalFilter extends AbstractGatewayFilterFactory<GlobalFilter.Conf
             }));
         });
     }
-
     @Getter
     @Setter
     public static class Config {
